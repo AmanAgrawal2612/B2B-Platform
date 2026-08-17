@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased font-sans;
+    background-image: radial-gradient(circle at 50% -20%, #ffffff, #f1f5f9);
+    min-height: 100vh;
+  }
+}
+
+/* Premium Light Glassmorphism UI Utilities */
+.glass-panel {
+  @apply bg-white/80 backdrop-blur-xl border border-white rounded-2xl shadow-xl shadow-slate-200/60;
+}
+
+.premium-input {
+  @apply w-full bg-white border border-slate-200 rounded-lg py-3 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all;
+  /* Removed px-4 so pl-10 can work correctly without being overridden */
+}
+
+.premium-btn {
+  @apply w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg shadow-blue-500/20 transition-all active:scale-95;
+}

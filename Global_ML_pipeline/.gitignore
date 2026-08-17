@@ -1,0 +1,30 @@
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large Datasets
+*.csv
+*.tsv
+*.dat
+
+# Model outputs
+saved_models/
+*.h5
+*.pkl
+*.pb
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# MLflow
+mlruns/
