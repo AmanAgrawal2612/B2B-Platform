@@ -1,8 +1,8 @@
 import React from 'react';
-import { ShieldAlert, CheckCircle, Trash2 } from 'lucide-react';
+import { ShieldAlert, CheckCircle, Trash2, Edit2 } from 'lucide-react';
 import Button from '../../common/Button';
 
-const PendingCatalogTable = ({ items, onApprove, onDelete }) => {
+const PendingCatalogTable = ({ items, onApprove, onDelete, onEdit }) => {
   return (
     <section className="space-y-6">
       <div className="flex justify-between items-center">
@@ -42,6 +42,9 @@ const PendingCatalogTable = ({ items, onApprove, onDelete }) => {
                   <td className="p-4 font-medium text-slate-800">{item.itemName}</td>
                   <td className="p-4 text-slate-500">User #{item.addedBy}</td>
                   <td className="p-4 flex justify-end gap-2">
+                    <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => onEdit(item.id, item.itemName)}>
+                      <Edit2 className="w-4 h-4" /> Edit
+                    </Button>
                     <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={() => onApprove(item.id)}>
                       <CheckCircle className="w-4 h-4" /> Approve
                     </Button>

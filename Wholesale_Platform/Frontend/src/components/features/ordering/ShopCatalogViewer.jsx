@@ -9,6 +9,7 @@ import { useCart } from '../../../hooks/useCart';
 import CartSidebar from './CartSidebar';
 import Button from '../../common/Button';
 import Input from '../../common/Input';
+import Select from 'react-select';
 
 const ShopCatalogViewer = () => {
   const { uniqueCode } = useParams();
@@ -71,6 +72,12 @@ const ShopCatalogViewer = () => {
   const selectedCategory = taxonomy.find(c => c.id === parseInt(selectedCategoryId));
   const subcategories = selectedCategory?.SubCategories || [];
 
+  const categoryOptions = taxonomy.map(cat => ({ value: cat.id, label: cat.name }));
+  const subcategoryOptions = subcategories.map(sub => ({ value: sub.id, label: sub.name }));
+
+  const currentCategoryOption = categoryOptions.find(o => o.value === parseInt(selectedCategoryId)) || null;
+  const currentSubcategoryOption = subcategoryOptions.find(o => o.value === parseInt(selectedSubcategoryId)) || null;
+
   const filteredInventory = inventory.filter(item => {
     const matchesSearch = item.MasterItem?.itemName?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategoryId ? item.MasterItem?.categoryId === parseInt(selectedCategoryId) : true;
@@ -115,31 +122,29 @@ const ShopCatalogViewer = () => {
             />
           </div>
           
-          <select 
-            className="p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none w-full md:w-48"
-            value={selectedCategoryId} 
-            onChange={(e) => {
-              setSelectedCategoryId(e.target.value);
-              setSelectedSubcategoryId('');
-            }}
-          >
-            <option value="">All Categories</option>
-            {taxonomy.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+          <div className="w-full md:w-64">
+            <Select 
+              placeholder="All Categories"
+              options={categoryOptions}
+              value={currentCategoryOption}
+              onChange={(val) => {
+                setSelectedCategoryId(val ? val.value : '');
+                setSelectedSubcategoryId('');
+              }}
+              isClearable
+            />
+          </div>
 
-          <select 
-            className="p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none w-full md:w-48 disabled:opacity-50"
-            value={selectedSubcategoryId} 
-            disabled={!selectedCategoryId}
-            onChange={(e) => setSelectedSubcategoryId(e.target.value)}
-          >
-            <option value="">All Subcategories</option>
-            {subcategories.map(sub => (
-              <option key={sub.id} value={sub.id}>{sub.name}</option>
-            ))}
-          </select>
+          <div className="w-full md:w-64">
+            <Select 
+              placeholder="All Subcategories"
+              options={subcategoryOptions}
+              value={currentSubcategoryOption}
+              isDisabled={!selectedCategoryId}
+              onChange={(val) => setSelectedSubcategoryId(val ? val.value : '')}
+              isClearable
+            />
+          </div>
         </div>
 
         {isLoading ? (

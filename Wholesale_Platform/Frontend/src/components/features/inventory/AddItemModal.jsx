@@ -7,6 +7,7 @@ import { addNotification } from '../../../store/notificationSlice';
 import Modal from '../../common/Modal';
 import Button from '../../common/Button';
 import Input from '../../common/Input';
+import Select from 'react-select';
 
 const AddItemModal = () => {
   const dispatch = useDispatch();
@@ -72,6 +73,14 @@ const AddItemModal = () => {
     item.subcategoryId === parseInt(selectedSubcategoryId)
   );
 
+  const categoryOptions = taxonomy.map(cat => ({ value: cat.id, label: cat.name }));
+  const subcategoryOptions = subcategories.map(sub => ({ value: sub.id, label: sub.name }));
+  const itemOptions = filteredItems.map(item => ({ value: item.id, label: item.itemName }));
+
+  const currentCategoryOption = categoryOptions.find(o => o.value === parseInt(selectedCategoryId)) || null;
+  const currentSubcategoryOption = subcategoryOptions.find(o => o.value === parseInt(selectedSubcategoryId)) || null;
+  const currentItemOption = itemOptions.find(o => o.value === parseInt(selectedMasterId)) || null;
+
   return (
     <Modal title="Add Item to Inventory" isOpen={isOpen} maxWidth="max-w-lg">
       <div className="space-y-6">
@@ -79,53 +88,44 @@ const AddItemModal = () => {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-            <select 
-              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
-              value={selectedCategoryId} 
-              onChange={(e) => {
-                setSelectedCategoryId(e.target.value);
+            <Select 
+              placeholder="Search or select a Category..."
+              options={categoryOptions}
+              value={currentCategoryOption}
+              onChange={(val) => {
+                setSelectedCategoryId(val ? val.value : '');
                 setSelectedSubcategoryId('');
                 setSelectedMasterId('');
               }}
-            >
-              <option value="">Select a Category...</option>
-              {taxonomy.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </select>
+              isClearable
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Subcategory</label>
-            <select 
-              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none disabled:opacity-50"
-              value={selectedSubcategoryId} 
-              disabled={!selectedCategoryId}
-              onChange={(e) => {
-                setSelectedSubcategoryId(e.target.value);
+            <Select 
+              placeholder="Search or select a Subcategory..."
+              options={subcategoryOptions}
+              value={currentSubcategoryOption}
+              isDisabled={!selectedCategoryId}
+              onChange={(val) => {
+                setSelectedSubcategoryId(val ? val.value : '');
                 setSelectedMasterId('');
               }}
-            >
-              <option value="">Select a Subcategory...</option>
-              {subcategories.map(sub => (
-                <option key={sub.id} value={sub.id}>{sub.name}</option>
-              ))}
-            </select>
+              isClearable
+            />
           </div>
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">Item Name</label>
-            <select 
-              className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none disabled:opacity-50"
-              value={selectedMasterId} 
-              disabled={!selectedSubcategoryId}
-              onChange={(e) => setSelectedMasterId(e.target.value)}
-            >
-              <option value="">Select Item Name...</option>
-              {filteredItems.map(item => (
-                <option key={item.id} value={item.id}>{item.itemName}</option>
-              ))}
-            </select>
+            <Select 
+              placeholder="Search or select Item Name..."
+              options={itemOptions}
+              value={currentItemOption}
+              isDisabled={!selectedSubcategoryId}
+              onChange={(val) => setSelectedMasterId(val ? val.value : '')}
+              isClearable
+            />
             {selectedSubcategoryId && filteredItems.length === 0 && (
                <p className="text-xs text-amber-600 mt-1">No items found in this subcategory.</p>
             )}

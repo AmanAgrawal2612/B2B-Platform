@@ -10,6 +10,9 @@ import Input from '../../common/Input';
 import { Package } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 
+import Select from 'react-select';
+import CreatableSelect from 'react-select/creatable';
+
 const GlobalCatalogModal = () => {
   const dispatch = useDispatch();
   const queryClient = useQueryClient();
@@ -33,9 +36,20 @@ const GlobalCatalogModal = () => {
   });
 
   const createMasterItemMutation = useMutation({
-    mutationFn: async (newItem) => {
-      const res = await apiClient.post('/api/catalog', newItem);
-      return res.data;
+    mutationFn: async (payload) => {
+      const { categoryId, subcategoryId, itemNames, price, currentStock, isAdmin } = payload;
+      
+      if (isAdmin) {
+        for (const name of itemNames) {
+          await apiClient.post('/api/catalog', { categoryId, subcategoryId, itemName: name });
+        }
+        return { message: `${itemNames.length} item(s) successfully added!` };
+      } else {
+        const res = await apiClient.post('/api/catalog', { 
+          categoryId, subcategoryId, itemName: itemNames[0], price, currentStock 
+        });
+        return res.data;
+      }
     },
     onSuccess: (data) => {
       dispatch(addNotification({ message: data.message || 'Item successfully added!', type: 'success' }));
@@ -55,23 +69,39 @@ const GlobalCatalogModal = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    
+    const itemNames = isAdmin 
+      ? newItemName.split(',').map(s => s.trim()).filter(Boolean)
+      : [newItemName.trim()];
+
+    if (itemNames.length === 0) return;
+
     createMasterItemMutation.mutate({ 
       categoryId: selectedCategoryId, 
       subcategoryId: selectedSubcategoryId, 
-      itemName: newItemName,
+      itemNames,
       price,
-      currentStock: stock
+      currentStock: stock,
+      isAdmin
     });
   };
 
   const selectedCategory = taxonomy.find(c => c.id === parseInt(selectedCategoryId));
   const subcategories = selectedCategory?.SubCategories || [];
 
+  const categoryOptions = taxonomy.map(cat => ({ value: cat.id, label: cat.name }));
+  const subcategoryOptions = subcategories.map(sub => ({ value: sub.id, label: sub.name }));
+
+  const currentCategoryOption = categoryOptions.find(o => o.value === selectedCategoryId) || (selectedCategoryId ? { value: selectedCategoryId, label: selectedCategoryId } : null);
+  const currentSubcategoryOption = subcategoryOptions.find(o => o.value === selectedSubcategoryId) || (selectedSubcategoryId ? { value: selectedSubcategoryId, label: selectedSubcategoryId } : null);
+
+  const CategorySelectComponent = isAdmin ? CreatableSelect : Select;
+
   return (
     <Modal title={<div className="flex items-center gap-2"><Package className="text-amber-500"/> Add to Global Catalog</div>} isOpen={isOpen} maxWidth="max-w-md">
       <p className="text-sm text-slate-500 mb-4">
         {isAdmin 
-          ? "Create a new approved item for the global catalog directly." 
+          ? "Create multiple approved items instantly by separating their names with commas." 
           : "This will create a new master item. It will be marked as \"Pending\" until an Admin reviews it, but you can use it immediately in your shop."}
       </p>
       
@@ -79,41 +109,38 @@ const GlobalCatalogModal = () => {
         
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-          <select 
+          <CategorySelectComponent
             required
-            className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none"
-            value={selectedCategoryId} 
-            onChange={(e) => {
-              setSelectedCategoryId(e.target.value);
+            placeholder="Select or search a Category..."
+            options={categoryOptions}
+            value={currentCategoryOption}
+            onChange={(val) => {
+              setSelectedCategoryId(val ? val.value : '');
               setSelectedSubcategoryId('');
             }}
-          >
-            <option value="">Select a Category...</option>
-            {taxonomy.map(cat => (
-              <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
-          </select>
+            isClearable
+          />
         </div>
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">Subcategory</label>
-          <select 
+          <CreatableSelect
             required
-            className="w-full p-2.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none disabled:opacity-50"
-            value={selectedSubcategoryId} 
-            disabled={!selectedCategoryId}
-            onChange={(e) => setSelectedSubcategoryId(e.target.value)}
-          >
-            <option value="">Select a Subcategory...</option>
-            {subcategories.map(sub => (
-              <option key={sub.id} value={sub.id}>{sub.name}</option>
-            ))}
-          </select>
+            placeholder="Select, search, or create a Subcategory..."
+            options={subcategoryOptions}
+            value={currentSubcategoryOption}
+            isDisabled={!selectedCategoryId}
+            onChange={(val) => setSelectedSubcategoryId(val ? val.value : '')}
+            isClearable
+          />
         </div>
 
         <Input 
-          label="Exact Item Name" required 
-          value={newItemName} onChange={e => setNewItemName(e.target.value)}
+          label={isAdmin ? "Item Names (Comma Separated)" : "Exact Item Name"} 
+          required 
+          value={newItemName} 
+          onChange={e => setNewItemName(e.target.value)}
+          placeholder={isAdmin ? "e.g. Cello Gripper, Reynolds 045" : ""}
         />
         
         {!isAdmin && (

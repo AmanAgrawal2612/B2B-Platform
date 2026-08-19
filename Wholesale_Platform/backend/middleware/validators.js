@@ -25,8 +25,8 @@ const loginValidator = [
 ];
 
 const catalogItemValidator = [
-  body('categoryId').isInt().withMessage('Valid Category is required'),
-  body('subcategoryId').isInt().withMessage('Valid Subcategory is required'),
+  body('categoryId').notEmpty().withMessage('Valid Category is required'),
+  body('subcategoryId').notEmpty().withMessage('Valid Subcategory is required'),
   body('itemName').trim().notEmpty().withMessage('Item name is required'),
   body('price').optional({ checkFalsy: true }).isFloat({ gt: 0 }).withMessage('Price must be greater than 0'),
   body('currentStock').optional({ checkFalsy: true }).isInt({ min: 0 }).withMessage('Stock cannot be negative'),

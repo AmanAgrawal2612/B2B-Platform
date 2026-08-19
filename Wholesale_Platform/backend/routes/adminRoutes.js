@@ -17,10 +17,26 @@ router.get('/stats', authenticate, authorize(['Admin']), async (req, res) => {
   });
 });
 
-// GET /api/admin/catalog/pending - Fetch pending master items
 router.get('/catalog/pending', authenticate, authorize(['Admin']), async (req, res) => {
-  const pendingItems = await MasterItem.findAll({ where: { status: 'Pending' } });
-  res.json(pendingItems);
+  const pendingItems = await MasterItem.findAll({ 
+    where: { status: 'Pending' },
+    include: [
+      { model: Category },
+      { model: SubCategory }
+    ],
+    order: [['itemName', 'ASC']]
+  });
+
+  const formattedItems = pendingItems.map(item => {
+    const plain = item.toJSON();
+    return {
+      ...plain,
+      category: plain.Category ? plain.Category.name : 'Unknown',
+      subCategory: plain.SubCategory ? plain.SubCategory.name : 'Unknown'
+    };
+  });
+  
+  res.json(formattedItems);
 });
 
 // PUT /api/admin/catalog/:id/approve - Approve a master item
@@ -29,6 +45,19 @@ router.put('/catalog/:id/approve', authenticate, authorize(['Admin']), async (re
   if (!item) return res.status(404).json({ message: 'Item not found' });
 
   item.status = 'Approved';
+  await item.save();
+
+  res.json(item);
+});
+
+// PUT /api/admin/catalog/:id - Edit a master item name
+router.put('/catalog/:id', authenticate, authorize(['Admin']), async (req, res) => {
+  const item = await MasterItem.findByPk(req.params.id);
+  if (!item) return res.status(404).json({ message: 'Item not found' });
+
+  if (req.body.itemName) {
+    item.itemName = req.body.itemName;
+  }
   await item.save();
 
   res.json(item);
@@ -48,6 +77,18 @@ router.delete('/catalog/:id', authenticate, authorize(['Admin']), async (req, re
 router.post('/taxonomy/category', authenticate, authorize(['Admin']), async (req, res) => {
   try {
     const category = await Category.create({ name: req.body.name });
+    
+    if (req.body.subcategories && Array.isArray(req.body.subcategories)) {
+      const subcats = req.body.subcategories.map(subName => ({
+        name: subName.trim(),
+        categoryId: category.id
+      })).filter(sub => sub.name.length > 0);
+      
+      if (subcats.length > 0) {
+        await SubCategory.bulkCreate(subcats);
+      }
+    }
+    
     res.status(201).json(category);
   } catch (error) {
     res.status(400).json({ message: 'Error creating category' });

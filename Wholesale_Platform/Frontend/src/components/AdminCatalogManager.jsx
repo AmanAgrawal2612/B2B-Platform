@@ -6,7 +6,6 @@ import { addNotification } from '../store/notificationSlice';
 import PendingCatalogTable from './features/admin/PendingCatalogTable';
 import ApprovedCatalogTable from './features/admin/ApprovedCatalogTable';
 import GlobalCatalogModal from './features/inventory/GlobalCatalogModal';
-import TaxonomyManager from './features/admin/TaxonomyManager';
 import { openModal } from '../store/uiSlice';
 import Button from './common/Button';
 import { Plus } from 'lucide-react';
@@ -63,8 +62,29 @@ const AdminCatalogManager = () => {
     }
   });
 
+  const editMutation = useMutation({
+    mutationFn: async ({ id, itemName }) => {
+      await apiClient.put(`/api/admin/catalog/${id}`, { itemName });
+    },
+    onSuccess: () => {
+      dispatch(addNotification({ message: 'Item name updated', type: 'success' }));
+      queryClient.invalidateQueries({ queryKey: ['pendingCatalog'] });
+      queryClient.invalidateQueries({ queryKey: ['approvedCatalog'] });
+    },
+    onError: (err) => {
+      dispatch(addNotification({ message: err.response?.data?.message || 'Error updating item', type: 'error' }));
+    }
+  });
+
   const handleApprove = (id) => {
     approveMutation.mutate(id);
+  };
+
+  const handleEdit = (id, currentName) => {
+    const newName = prompt('Edit Item Name:', currentName);
+    if (newName && newName.trim() !== '' && newName !== currentName) {
+      editMutation.mutate({ id, itemName: newName.trim() });
+    }
   };
 
   const handleDelete = (id, isApproved = false) => {
@@ -85,10 +105,8 @@ const AdminCatalogManager = () => {
           <Plus className="w-5 h-5 mr-2" /> Add Global Item
         </Button>
       </div>
-      <PendingCatalogTable items={pendingItems} onApprove={handleApprove} onDelete={handleDelete} />
-      <ApprovedCatalogTable items={approvedItems} onDelete={handleDelete} />
-      
-      <TaxonomyManager />
+      <PendingCatalogTable items={pendingItems} onApprove={handleApprove} onDelete={handleDelete} onEdit={handleEdit} />
+      <ApprovedCatalogTable items={approvedItems} onDelete={handleDelete} onEdit={handleEdit} />
 
       <GlobalCatalogModal />
     </div>

@@ -1,8 +1,8 @@
 import React from 'react';
-import { CheckSquare, Trash2 } from 'lucide-react';
+import { CheckSquare, Trash2, Edit2 } from 'lucide-react';
 import Button from '../../common/Button';
 
-const ApprovedCatalogTable = ({ items, onDelete }) => {
+const ApprovedCatalogTable = ({ items, onDelete, onEdit }) => {
   return (
     <section className="space-y-6">
       <div className="flex justify-between items-center">
@@ -39,6 +39,9 @@ const ApprovedCatalogTable = ({ items, onDelete }) => {
                   <td className="p-4 text-slate-600">{item.subCategory}</td>
                   <td className="p-4 font-medium text-slate-800">{item.itemName}</td>
                   <td className="p-4 flex justify-end gap-2">
+                    <Button variant="ghost" onClick={() => onEdit(item.id, item.itemName)} className="text-blue-400 hover:text-blue-600 hover:bg-blue-50">
+                      <Edit2 className="w-5 h-5" />
+                    </Button>
                     <Button variant="ghost" onClick={() => onDelete(item.id, true)} className="text-red-400 hover:text-red-600 hover:bg-red-50">
                       <Trash2 className="w-5 h-5" />
                     </Button>

@@ -11,7 +11,8 @@ router.get('/', authenticate, async (req, res) => {
     include: [
       { model: Category },
       { model: SubCategory }
-    ]
+    ],
+    order: [['itemName', 'ASC']]
   });
   
   // Filter logic: Only Approved OR (Pending AND addedBy === req.user.id)
@@ -32,15 +33,31 @@ router.get('/', authenticate, async (req, res) => {
 
 // POST /api/catalog - Create a new MasterItem
 router.post('/', authenticate, catalogItemValidator, async (req, res) => {
-  const { categoryId, subcategoryId, itemName, price, currentStock } = req.body;
+  let { categoryId, subcategoryId, itemName, price, currentStock } = req.body;
   const addedBy = req.user.id;
   const status = req.user.role === 'Admin' ? 'Approved' : 'Pending';
+
+  let finalCategoryId = parseInt(categoryId);
+  if (isNaN(finalCategoryId) && req.user.role === 'Admin') {
+    const [cat] = await Category.findOrCreate({ where: { name: categoryId } });
+    finalCategoryId = cat.id;
+  } else if (isNaN(finalCategoryId)) {
+    return res.status(403).json({ message: 'Only Admins can create new Categories.' });
+  }
+
+  let finalSubcategoryId = parseInt(subcategoryId);
+  if (isNaN(finalSubcategoryId)) {
+    const [sub] = await SubCategory.findOrCreate({ 
+      where: { name: subcategoryId, categoryId: finalCategoryId } 
+    });
+    finalSubcategoryId = sub.id;
+  }
 
   // Check if it already exists (case-insensitive)
   const allItems = await MasterItem.findAll();
   const existing = allItems.find(item => 
-    item.categoryId === parseInt(categoryId) &&
-    item.subcategoryId === parseInt(subcategoryId) &&
+    item.categoryId === finalCategoryId &&
+    item.subcategoryId === finalSubcategoryId &&
     item.itemName.toLowerCase() === itemName.toLowerCase()
   );
   
@@ -74,8 +91,8 @@ router.post('/', authenticate, catalogItemValidator, async (req, res) => {
   }
 
   const newItem = await MasterItem.create({
-    categoryId,
-    subcategoryId,
+    categoryId: finalCategoryId,
+    subcategoryId: finalSubcategoryId,
     itemName,
     addedBy,
     status
