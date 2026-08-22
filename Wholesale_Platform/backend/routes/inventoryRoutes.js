@@ -18,7 +18,12 @@ router.get('/', authenticate, authorize(['ShopOwner']), async (req, res) => {
         { model: Category },
         { model: SubCategory }
       ]
-    }]
+    }],
+    order: [
+      [MasterItem, Category, 'name', 'ASC'],
+      [MasterItem, SubCategory, 'name', 'ASC'],
+      [MasterItem, 'itemName', 'ASC']
+    ]
   });
   
   res.json(items);
@@ -51,7 +56,12 @@ router.get('/catalog/:uniqueCode', authenticate, async (req, res) => {
         { model: Category },
         { model: SubCategory }
       ]
-    }]
+    }],
+    order: [
+      [MasterItem, Category, 'name', 'ASC'],
+      [MasterItem, SubCategory, 'name', 'ASC'],
+      [MasterItem, 'itemName', 'ASC']
+    ]
   });
 
   res.json({ shopId: shop.id, inventory: items });
@@ -68,8 +78,9 @@ router.post('/', authenticate, authorize(['ShopOwner']), async (req, res) => {
   const existing = await Inventory.findOne({
     where: { shopId: shop.id, masterItemId }
   });
+  
   if (existing) {
-    return res.status(400).json({ message: 'Item already exists in your inventory' });
+    return res.status(400).json({ message: 'Item already exists in your inventory', masterItemId });
   }
 
   const newItem = await Inventory.create({

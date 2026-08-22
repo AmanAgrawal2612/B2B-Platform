@@ -24,7 +24,11 @@ router.get('/catalog/pending', authenticate, authorize(['Admin']), async (req, r
       { model: Category },
       { model: SubCategory }
     ],
-    order: [['itemName', 'ASC']]
+    order: [
+      [Category, 'name', 'ASC'],
+      [SubCategory, 'name', 'ASC'],
+      ['itemName', 'ASC']
+    ]
   });
 
   const formattedItems = pendingItems.map(item => {
@@ -137,6 +141,58 @@ router.delete('/taxonomy/subcategory/:id', authenticate, authorize(['Admin']), a
 
   await SubCategory.destroy({ where: { id: req.params.id } });
   res.json({ message: 'SubCategory deleted' });
+});
+
+// --- User Management ---
+
+router.get('/users', authenticate, authorize(['Admin']), async (req, res) => {
+  try {
+    const users = await User.findAll({
+      attributes: ['id', 'name', 'email', 'role', 'status', 'createdAt'],
+      include: [
+        {
+          model: Shop,
+          as: 'Shops'
+        }
+      ],
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(users);
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ message: 'Error fetching users' });
+  }
+});
+
+router.put('/users/:id/status', authenticate, authorize(['Admin']), async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // Toggle status
+    user.status = user.status === 'Active' ? 'Blocked' : 'Active';
+    await user.save();
+    
+    res.json({ message: `User status changed to ${user.status}`, status: user.status });
+  } catch (error) {
+    console.error('Error changing user status:', error);
+    res.status(500).json({ message: 'Error updating user' });
+  }
+});
+
+router.delete('/users/:id', authenticate, authorize(['Admin']), async (req, res) => {
+  try {
+    const user = await User.findByPk(req.params.id);
+    if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // Soft delete (paranoid: true will set deletedAt)
+    await user.destroy();
+    
+    res.json({ message: 'User deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    res.status(500).json({ message: 'Error deleting user' });
+  }
 });
 
 module.exports = router;

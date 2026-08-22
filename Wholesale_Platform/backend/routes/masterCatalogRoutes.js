@@ -12,7 +12,11 @@ router.get('/', authenticate, async (req, res) => {
       { model: Category },
       { model: SubCategory }
     ],
-    order: [['itemName', 'ASC']]
+    order: [
+      [Category, 'name', 'ASC'],
+      [SubCategory, 'name', 'ASC'],
+      ['itemName', 'ASC']
+    ]
   });
   
   // Filter logic: Only Approved OR (Pending AND addedBy === req.user.id)
@@ -77,9 +81,7 @@ router.post('/', authenticate, catalogItemValidator, async (req, res) => {
             price
           });
         } else {
-           existingInventory.currentStock = currentStock || existingInventory.currentStock;
-           existingInventory.price = price;
-           await existingInventory.save();
+           return res.status(400).json({ message: 'Item already exists in your inventory', masterItemId: existing.id });
         }
       }
       return res.status(200).json({ 

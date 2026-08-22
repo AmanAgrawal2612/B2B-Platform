@@ -1,10 +1,21 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { useDispatch } from 'react-redux';
 import { closeModal } from '../../store/uiSlice';
 
 const Modal = ({ title, children, onClose, isOpen, maxWidth = 'max-w-lg' }) => {
   const dispatch = useDispatch();
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
 
   if (!isOpen) return null;
 

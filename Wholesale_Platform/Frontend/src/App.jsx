@@ -10,6 +10,7 @@ import CustomerDashboard from './components/CustomerDashboard';
 import CustomerNetworkManager from './components/CustomerNetworkManager';
 import AdminDashboard from './components/AdminDashboard';
 import AdminCatalogManager from './components/AdminCatalogManager';
+import AdminUserManager from './components/features/admin/AdminUserManager';
 import ShopCatalogViewer from './components/features/ordering/ShopCatalogViewer';
 import OrderProducts from './components/OrderProducts';
 import ForecastDashboard from './components/features/forecasts/ForecastDashboard';
@@ -133,7 +134,7 @@ function App() {
           {/* Admin-only generic routes */}
           <Route path="/users" element={
             <ProtectedRoute allowedRoles={['Admin']}>
-              <div className="p-8 text-center text-slate-500">User Management Coming Soon</div>
+              <AdminUserManager />
             </ProtectedRoute>
           } />
           

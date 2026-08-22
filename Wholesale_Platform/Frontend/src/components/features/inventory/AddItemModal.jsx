@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '../../../apiClient';
@@ -17,9 +17,19 @@ const AddItemModal = () => {
 
   const [selectedCategoryId, setSelectedCategoryId] = useState('');
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState('');
-  const [selectedMasterId, setSelectedMasterId] = useState('');
-  const [price, setPrice] = useState('');
-  const [stock, setStock] = useState('');
+  const [selectedItems, setSelectedItems] = useState([]); // Array of selected option objects { value, label }
+  const [itemDetails, setItemDetails] = useState({}); // { [masterId]: { price: '', stock: '' } }
+  const [failedItems, setFailedItems] = useState([]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedCategoryId('');
+      setSelectedSubcategoryId('');
+      setSelectedItems([]);
+      setItemDetails({});
+      setFailedItems([]);
+    }
+  }, [isOpen]);
 
   const { data: taxonomy = [] } = useQuery({
     queryKey: ['taxonomy'],
@@ -40,19 +50,27 @@ const AddItemModal = () => {
   });
 
   const addToInventoryMutation = useMutation({
-    mutationFn: async (newItem) => {
-      const res = await apiClient.post('/api/inventory', newItem);
-      return res.data;
+    mutationFn: async () => {
+      const promises = selectedItems.map(item => {
+        const details = itemDetails[item.value] || { price: 0, stock: 0 };
+        return apiClient.post('/api/inventory', {
+          masterItemId: item.value,
+          price: details.price,
+          currentStock: details.stock
+        });
+      });
+      await Promise.all(promises);
+      return true;
     },
     onSuccess: () => {
-      dispatch(addNotification({ message: 'Item added to inventory successfully', type: 'success' }));
+      dispatch(addNotification({ message: 'Items added to inventory successfully', type: 'success' }));
       queryClient.invalidateQueries({ queryKey: ['inventory'] });
       dispatch(closeModal());
       setSelectedCategoryId('');
       setSelectedSubcategoryId('');
-      setSelectedMasterId('');
-      setPrice('');
-      setStock('');
+      setSelectedItems([]);
+      setItemDetails({});
+      setFailedItems([]);
     },
     onError: (err) => {
       dispatch(addNotification({ message: err.response?.data?.message || 'Error adding to inventory', type: 'error' }));
@@ -61,8 +79,31 @@ const AddItemModal = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!selectedMasterId) return;
-    addToInventoryMutation.mutate({ masterItemId: selectedMasterId, price, currentStock: stock });
+    if (selectedItems.length === 0) return;
+    
+    const inventory = queryClient.getQueryData(['inventory']) || [];
+    const inventoryMasterIds = inventory.map(item => item.masterItemId);
+    
+    const duplicateItems = selectedItems.filter(item => inventoryMasterIds.includes(item.value));
+    
+    if (duplicateItems.length > 0) {
+      const duplicateIds = duplicateItems.map(item => item.value);
+      setFailedItems(duplicateIds);
+      dispatch(addNotification({ message: `${duplicateItems.length} item(s) already exist in your inventory. Nothing was saved.`, type: 'error' }));
+      return;
+    }
+
+    addToInventoryMutation.mutate();
+  };
+
+  const handleDetailChange = (id, field, value) => {
+    setItemDetails(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [field]: value
+      }
+    }));
   };
 
   const selectedCategory = taxonomy.find(c => c.id === parseInt(selectedCategoryId));
@@ -79,10 +120,9 @@ const AddItemModal = () => {
 
   const currentCategoryOption = categoryOptions.find(o => o.value === parseInt(selectedCategoryId)) || null;
   const currentSubcategoryOption = subcategoryOptions.find(o => o.value === parseInt(selectedSubcategoryId)) || null;
-  const currentItemOption = itemOptions.find(o => o.value === parseInt(selectedMasterId)) || null;
 
   return (
-    <Modal title="Add Item to Inventory" isOpen={isOpen} maxWidth="max-w-lg">
+    <Modal title="Add Items to Inventory" isOpen={isOpen} maxWidth="max-w-lg">
       <div className="space-y-6">
         
         <div className="space-y-4">
@@ -95,7 +135,7 @@ const AddItemModal = () => {
               onChange={(val) => {
                 setSelectedCategoryId(val ? val.value : '');
                 setSelectedSubcategoryId('');
-                setSelectedMasterId('');
+                setSelectedItems([]);
               }}
               isClearable
             />
@@ -110,20 +150,21 @@ const AddItemModal = () => {
               isDisabled={!selectedCategoryId}
               onChange={(val) => {
                 setSelectedSubcategoryId(val ? val.value : '');
-                setSelectedMasterId('');
+                setSelectedItems([]);
               }}
               isClearable
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Item Name</label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Item Name(s)</label>
             <Select 
-              placeholder="Search or select Item Name..."
+              isMulti
+              placeholder="Search and select multiple items..."
               options={itemOptions}
-              value={currentItemOption}
+              value={selectedItems}
               isDisabled={!selectedSubcategoryId}
-              onChange={(val) => setSelectedMasterId(val ? val.value : '')}
+              onChange={(vals) => setSelectedItems(vals || [])}
               isClearable
             />
             {selectedSubcategoryId && filteredItems.length === 0 && (
@@ -132,22 +173,37 @@ const AddItemModal = () => {
           </div>
         </div>
 
-        {selectedMasterId && (
+        {selectedItems.length > 0 && (
           <form onSubmit={handleSubmit} className="space-y-4 pt-4 border-t border-slate-100">
-            <div className="flex gap-4">
-              <Input 
-                label="Your Price (₹)" type="number" step="0.01" required 
-                value={price} onChange={e => setPrice(e.target.value)}
-                className="flex-1"
-              />
-              <Input 
-                label="Initial Stock" type="number" required 
-                value={stock} onChange={e => setStock(e.target.value)}
-                className="flex-1"
-              />
+            <h3 className="text-sm font-semibold text-slate-700">Set Prices & Initial Stock</h3>
+            <div className="max-h-60 overflow-y-auto space-y-3 pr-2">
+              {selectedItems.map(item => {
+                const isFailed = failedItems.includes(item.value);
+                return (
+                  <div key={item.value} className={`p-3 rounded-lg border ${isFailed ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-200'}`}>
+                    <p className={`text-sm font-medium mb-2 ${isFailed ? 'text-red-800' : 'text-slate-800'}`}>
+                      {item.label} {isFailed && <span className="text-red-500 font-bold ml-1">(Already Exists)</span>}
+                    </p>
+                    <div className="flex gap-4">
+                      <Input 
+                        label="Your Price (₹)" type="number" step="0.01" required 
+                        value={itemDetails[item.value]?.price || ''} 
+                        onChange={e => handleDetailChange(item.value, 'price', e.target.value)}
+                        className="flex-1"
+                      />
+                      <Input 
+                        label="Initial Stock" type="number" required 
+                        value={itemDetails[item.value]?.stock || ''} 
+                        onChange={e => handleDetailChange(item.value, 'stock', e.target.value)}
+                        className="flex-1"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             <Button type="submit" fullWidth disabled={addToInventoryMutation.isLoading}>
-              Save to My Inventory
+              Save {selectedItems.length} Item(s) to Inventory
             </Button>
           </form>
         )}

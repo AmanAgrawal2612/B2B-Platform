@@ -14,6 +14,8 @@ const User = sequelize.define('User', {
     type: DataTypes.ENUM('Active', 'Blocked'),
     defaultValue: 'Active'
   }
+}, {
+  paranoid: true // Enables soft deletes (adds deletedAt column)
 });
 
 module.exports = User;
